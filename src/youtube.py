@@ -2,9 +2,10 @@ from aifc import Error
 import os
 from resource import error
 from pytube import Playlist
+from utils import create_save_format
 
-def insert_items_in_file(items: list) -> None:
-    with open("videos.txt", "w") as file:
+def insert_items_in_file(items: list, filename: str) -> None:
+    with open(filename, "w") as file:
         for item in items:
             file.write(item + "\n")
 
@@ -24,12 +25,9 @@ def get_credentials(filename: str) -> list:
     
     return credentials
 
-def create_save_format(id: str, duration: str, title: str) -> str:
-    return id + "###" + duration + "###" + title
 
-
-def main():
-    url = "https://www.youtube.com/playlist?list=" + get_credentials("credentials.txt")[0]
+def create_list_of_songs():
+    url = "https://www.youtube.com/playlist?list=" + get_credentials("../credentials.txt")[0]
     playlist = Playlist(url)
 
     items = []
@@ -40,15 +38,12 @@ def main():
         try:
             data = meta[0]
             if data["Song"]:
-                song = create_save_format(video.video_id, str(video.length), data["Song"])
+                song = create_save_format(video.video_id, str(video.length), data["Song"], True)
                 items.append(song)
                 print(song)
         except:
             pass
     
     if len(items) != 0:
-        insert_items_in_file(items)
+        insert_items_in_file(items, "../work/database.txt")
  
-
-if __name__ == "__main__":
-    main()
