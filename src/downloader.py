@@ -23,7 +23,7 @@ def move_files(id: str, title: str):
 
 
 
-def download_audio(link: str) -> str:
+def download_audio(link: str) -> tuple:
    ydl_opts = {
        'format': 'bestaudio/best',
        'postprocessors': [{
@@ -31,6 +31,8 @@ def download_audio(link: str) -> str:
            'preferredcodec': 'mp3',
            'preferredquality': '192',
        }],
+       'retries': 10,
+       'continuedl': 'True',
        'ffmpeg-location': './',
        'outtmpl': "../work/music/%(id)s.%(ext)s",
        'keepvideo': 'False'
@@ -52,7 +54,7 @@ def read_info_from_file(filename: str) -> list:
     urls_and_names = []
 
     if os.path.getsize(filename) == 0:
-        raise Error("videos.txt file is empty")
+        raise Error("database.txt file is empty")
 
     with open(filename, "r") as file:
         for line in file:
