@@ -1,11 +1,12 @@
 from pytube import Playlist
 from typing import List
 import re
-
-from rich import _console as console
+from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from downloader import Song
+
+console = Console()
 
 def sanitize_filename(filename: str) -> str:
     """Remove invalid characters from filename"""
