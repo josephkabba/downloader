@@ -1,49 +1,47 @@
-from aifc import Error
-import os
-from resource import error
 from pytube import Playlist
-from utils import create_save_format
+from typing import List
+import re
 
-def insert_items_in_file(items: list, filename: str) -> None:
-    with open(filename, "w") as file:
-        for item in items:
-            file.write(item + "\n")
+from rich import _console as console
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from downloader import Song
 
-def get_credentials(filename: str) -> list:
-    credentials = []
+def sanitize_filename(filename: str) -> str:
+    """Remove invalid characters from filename"""
+    return re.sub(r'[<>:"/\\|?*]', '', filename)
 
-    if not os.path.isfile(filename):
-        raise Error("auth file don't exist")
-    
-    if os.path.getsize(filename) == 0:
-        raise Error("auth file is empty")
+def get_playlist_songs(url: str) -> List[Song]:
+    """Extract songs from YouTube playlist"""
+    try:
+        console.print("[cyan]Fetching playlist information...")
+        playlist = Playlist(url)
+        songs = []
 
-    with open(filename, "r") as file:
-        for credential in file:
-            credentials.append(credential.strip())
-    
-    return credentials
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]Processing videos...", total=len(playlist.videos))
 
+            for video in playlist.videos:
+                try:
+                    meta = video.metadata
+                    if meta and meta[0].get("Song"):
+                        song = Song(
+                            id=video.video_id,
+                            duration=str(video.length),
+                            title=sanitize_filename(meta[0]["Song"]),
+                            is_from_metadata=True
+                        )
+                        songs.append(song)
+                    progress.advance(task)
+                except Exception as e:
+                    console.print(f"[yellow]Warning: Could not process video {video.video_id}: {str(e)}")
+                    progress.advance(task)
 
-def create_list_of_songs():
-    url = "https://www.youtube.com/playlist?list=" + get_credentials("../credentials.txt")[0]
-    playlist = Playlist(url)
-
-    items = []
-
-    for video in playlist.videos:
-        meta = video.metadata
-
-        try:
-            data = meta[0]
-            if data["Song"]:
-                song = create_save_format(video.video_id, str(video.length), data["Song"], True)
-                items.append(song)
-                print(song)
-        except:
-            pass
-    
-    if len(items) != 0:
-        insert_items_in_file(items, "../work/database.txt")
- 
+        return songs
+    except Exception as e:
+        console.print(f"[red]Error processing playlist: {str(e)}")
+        return []

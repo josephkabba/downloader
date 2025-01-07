@@ -1,12 +1,10 @@
-from aifc import Error
 import os
-
 
 def read_file_data(filename: str) -> list:
     data = []
 
     if os.path.getsize(filename) == 0:
-        raise Error("file is empty")
+        raise Exception("file is empty")
 
     with open(filename, "r") as file:
         for line in file:
