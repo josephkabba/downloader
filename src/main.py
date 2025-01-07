@@ -66,9 +66,43 @@ Arch Linux:
 
 def display_help():
     console.print("\n[green]Available commands:")
-    console.print("  [cyan]dl <playlist_url>[/cyan] - Download songs from a YouTube playlist")
+    console.print("  [cyan]dl <playlist_url> [options][/cyan] - Download songs from a YouTube playlist")
+    console.print("    Options:")
+    console.print("      [dim]-n <number>[/dim] - Download only first N songs")
+    console.print("      [dim]-r[/dim] - Reverse playlist order")
+    console.print("    Example: dl URL -n 5 -r")
     console.print("  [cyan]help[/cyan] - Show this help message")
     console.print("  [cyan]quit[/cyan] - Exit the program\n")
+    
+def parse_dl_options(args):
+    """Parse download command options"""
+    options = {
+        'url': None,
+        'limit': None,
+        'reverse': False
+    }
+    
+    i = 1
+    while i < len(args):
+        if i == 1:
+            options['url'] = args[i]
+        elif args[i] == '-n' and i + 1 < len(args):
+            try:
+                limit = int(args[i + 1])
+                if limit <= 0:
+                    raise ValueError("Limit must be positive")
+                options['limit'] = limit
+                i += 1
+            except ValueError as e:
+                raise ValueError(f"Invalid limit value: {e}")
+        elif args[i] == '-r':
+            options['reverse'] = True
+        i += 1
+    
+    if not options['url']:
+        raise ValueError("No URL provided")
+    
+    return options
 
 def main():
     # Check for FFmpeg before starting
@@ -94,28 +128,46 @@ def main():
             elif command[0] == "help":
                 display_help()
             elif command[0] == "dl":
-                if len(command) < 2:
-                    console.print("[red]Error: Please provide a playlist URL")
-                    continue
+                try:
+                    options = parse_dl_options(command)
+                    console.print("[cyan]Fetching playlist...[/cyan]")
+                    songs = get_playlist_songs(options['url'], reverse=options['reverse'])
+                    
+                    if not songs:
+                        console.print("[red]No songs found in playlist")
+                        continue
 
-                url = command[1]
-                songs = get_playlist_songs(url)
-                
-                if not songs:
-                    console.print("[red]No songs found in playlist")
-                    continue
+                    # Apply limit if specified
+                    if options['limit']:
+                        original_count = len(songs)
+                        songs = songs[:options['limit']]
+                        console.print(f"[green]Selected {len(songs)} of {original_count} songs from playlist")
+                        if options['reverse']:
+                            console.print("[cyan]Note: Songs are taken from the end of the playlist")
+                    else:
+                        console.print(f"[green]Found {len(songs)} songs in playlist")
+                        if options['reverse']:
+                            console.print("[cyan]Note: Playlist order is reversed")
 
-                console.print(f"[green]Found {len(songs)} songs in playlist")
-                if Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
-                    downloader.download_playlist(songs)
-                    console.print("[green]Download complete!")
+                    if Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
+                        downloader.download_playlist(songs)
+                        console.print("[green]Download complete!")
+                except ValueError as e:
+                    console.print(f"[red]Error: {str(e)}")
+                    continue
+                except Exception as e:
+                    console.print(f"[red]Error processing playlist: {str(e)}")
+                    continue
             else:
                 console.print("[red]Invalid command. Type 'help' for available commands")
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Operation cancelled by user")
+            break
         except Exception as e:
             console.print(f"[red]Error: {str(e)}")
+
+    console.print("[yellow]Goodbye!")
 
 if __name__ == "__main__":
     main()

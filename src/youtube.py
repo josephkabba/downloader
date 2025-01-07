@@ -59,7 +59,7 @@ def get_playlist_id(url: str) -> str:
     
     return playlist_id
 
-def get_playlist_songs(url: str) -> List[Song]:
+def get_playlist_songs(url: str, reverse: bool = False) -> List[Song]:
     """Extract songs from YouTube playlist"""
     try:
         console.print("[cyan]Fetching playlist information...")
@@ -67,15 +67,14 @@ def get_playlist_songs(url: str) -> List[Song]:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat': True,  # Only extract video metadata, don't download
-            'ignoreerrors': True   # Skip unavailable videos
+            'extract_flat': True,
+            'ignoreerrors': True   
         }
 
         songs = []
         failed_count = 0
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Get playlist information
             playlist_info = ydl.extract_info(url, download=False)
             
             if not playlist_info:
@@ -84,6 +83,10 @@ def get_playlist_songs(url: str) -> List[Song]:
 
             entries = playlist_info.get('entries', [])
             valid_entries = [e for e in entries if e is not None]
+            
+            # Apply reverse if requested
+            if reverse:
+                valid_entries = valid_entries[::-1]
             
             with Progress(
                 SpinnerColumn(),
@@ -94,7 +97,6 @@ def get_playlist_songs(url: str) -> List[Song]:
 
                 for entry in valid_entries:
                     try:
-                        # Get detailed video information
                         video_info = ydl.extract_info(
                             f"https://www.youtube.com/watch?v={entry['id']}", 
                             download=False
