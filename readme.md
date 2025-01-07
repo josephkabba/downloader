@@ -37,26 +37,31 @@ python src/main.py
 ```
 
 2. Available Commands:
-   - `dl <playlist_url> [options]` : Download songs from a YouTube playlist
+   - `dl <playlist_url> [options]` : Download songs from a YouTube playlist (with confirmation)
+   - `adl <playlist_url> [options]` : Auto-download songs from playlist (no confirmation)
      - Options:
        - `-n <number>` : Download only first N songs
        - `-r` : Reverse playlist order
+       - `-b <bitrate>` : Set MP3 bitrate (128, 192, 256, or 320)
    - `help` : Show available commands
    - `quit` : Exit the program
 
 3. Examples:
 ```
-# Download entire playlist
+# Download entire playlist (with confirmation)
 dl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
 
-# Download first 5 songs
-dl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -n 5
+# Download first 5 songs at 320kbps
+dl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -n 5 -b 320
 
-# Download last 3 songs
-dl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -n 3 -r
+# Auto-download last 3 songs at 256kbps
+adl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -n 3 -r -b 256
 
-# Download all songs in reverse order
+# Download all songs in reverse order at default quality (192kbps)
 dl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -r
+
+# Auto-download entire playlist at 128kbps
+adl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -b 128
 ```
 
 ## Directory Structure:
