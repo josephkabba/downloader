@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
-import youtube_dl
+import yt_dlp
 from typing import List, Optional
 from dataclasses import dataclass
 from rich.console import Console
@@ -48,12 +48,14 @@ class YouTubeDownloader:
                 'preferredquality': '192',
             }],
             'retries': 10,
-            'continuedl': True,
-            'ffmpeg-location': './',
+            'ignoreerrors': True,
+            'ffmpeg-location': './ffmpeg/bin/',  # Updated ffmpeg location
             'outtmpl': os.path.join(self.output_dir, "%(id)s.%(ext)s"),
             'keepvideo': False,
             'quiet': True,
-            'no_warnings': True
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',
+            'concurrent_fragments': 4  # Enable parallel fragment downloads
         }
 
     def download_audio(self, song: Song, progress: Optional[Progress] = None) -> bool:
@@ -61,14 +63,26 @@ class YouTubeDownloader:
         try:
             task_id = progress.add_task(f"[cyan]Downloading {song.title}...", total=None) if progress else None
             
-            with youtube_dl.YoutubeDL(self._get_ydl_opts()) as ydl:
+            with yt_dlp.YoutubeDL(self._get_ydl_opts()) as ydl:
                 url = f"http://www.youtube.com/watch?v={song.id}"
                 ydl.download([url])
 
             # Move file to output directory
             old_path = os.path.join(self.output_dir, f"{song.id}.mp3")
             new_path = os.path.join(self.output_dir, "output", f"{song.title}.mp3")
-            os.rename(old_path, new_path)
+            
+            # Check if the file exists before trying to move it
+            if os.path.exists(old_path):
+                # If destination file already exists, remove it
+                if os.path.exists(new_path):
+                    os.remove(new_path)
+                os.rename(old_path, new_path)
+                console.print(f"[green]Successfully downloaded: {song.title}")
+            else:
+                console.print(f"[yellow]Warning: Download completed but file not found: {song.title}")
+                if progress:
+                    progress.remove_task(task_id)
+                return False
 
             if progress:
                 progress.remove_task(task_id)
@@ -82,6 +96,12 @@ class YouTubeDownloader:
 
     def download_playlist(self, songs: List[Song]):
         """Download multiple songs using thread pool"""
+        total_songs = len(songs)
+        success_count = 0
+        failed_count = 0
+
+        console.print(f"[cyan]Starting download of {total_songs} songs...")
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -93,4 +113,13 @@ class YouTubeDownloader:
                     for song in songs
                 ]
                 for future in futures:
-                    future.result()
+                    if future.result():
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+        # Print summary
+        console.print(f"\n[green]Download Summary:")
+        console.print(f"[green]Successfully downloaded: {success_count} songs")
+        if failed_count > 0:
+            console.print(f"[yellow]Failed downloads: {failed_count} songs")
