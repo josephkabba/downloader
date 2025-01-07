@@ -1,9 +1,51 @@
-videos.txt
+# Project-specific files and directories
 credentials.txt
+videos.txt
+*.mp3
+*.mp4
+/work/
+/ffmpeg/
+/icons/
 
-src/__pycache__/
-/work
+# Build and distribution
+/build/
+/dist/
+*.spec
 
-/ffmpeg
-/build
-/dist
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env/
+.venv/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
