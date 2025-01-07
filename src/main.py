@@ -139,7 +139,7 @@ def main():
                 break
             elif command[0] == "help":
                 display_help()
-            elif command[0] == ["dl", "adl"]:
+            elif command[0] in ["dl", "adl"]:
                 try:
                     options = parse_dl_options(command)
                     console.print("[cyan]Fetching playlist...[/cyan]")
