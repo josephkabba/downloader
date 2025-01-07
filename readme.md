@@ -67,36 +67,60 @@ adl https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID -b 128
 ## Directory Structure:
 - `/work/music/output/` : Contains the downloaded MP3 files
 - `/work/` : Contains program output and temporary files
-- `/ffmpeg/` : Place FFmpeg files here
+- `/ffmpeg/` : Place FFmpeg files here and then add the bin of ffmpeg to your path environmental virables of your system (Windows only)
 - `/src/` : Source code files
 
 ## Creating an Executable (Windows)
 
-Using Command Prompt:
+Using Command Prompt (This is an example get the dependencies from the requirements.txt):
 ```
 pyinstaller --noconfirm --onefile --windowed ^
-  --add-data "ffmpeg/bin/ffmpeg.exe;." ^
-  --add-data "ffmpeg/bin/ffprobe.exe;." ^
   --icon="icons/icon-96.ico" ^
+  --collect-all rich ^
+  --collect-all certifi ^
+  --collect-all charset_normalizer ^
+  --collect-all requests ^
+  --collect-all urllib3 ^
+  --collect-all idna ^
+  --collect-all ffmpeg_python ^
+  --collect-data beautifulsoup4 ^
   --hidden-import=rich.console ^
   --hidden-import=rich.prompt ^
   --hidden-import=rich.progress ^
   --hidden-import=rich.panel ^
-  --hidden-import=yt_dlp ^
+  --hidden-import=soupsieve ^
+  --hidden-import=requests ^
+  --hidden-import=urllib3 ^
+  --hidden-import=certifi ^
+  --hidden-import=charset_normalizer ^
+  --hidden-import=idna ^
+  --hidden-import=ffmpeg_python ^
   src/main.py
 ```
 
-Using PowerShell:
+Using PowerShell (This is an example get the dependencies from the requirements.txt):
 ```
 pyinstaller --noconfirm --onefile --windowed `
-  --add-data "ffmpeg/bin/ffmpeg.exe;." `
-  --add-data "ffmpeg/bin/ffprobe.exe;." `
   --icon="icons/icon-96.ico" `
+  --collect-all rich `
+  --collect-all certifi `
+  --collect-all charset_normalizer `
+  --collect-all requests `
+  --collect-all urllib3 `
+  --collect-all idna `
+  --collect-all ffmpeg_python `
+  --collect-data beautifulsoup4 `
   --hidden-import=rich.console `
   --hidden-import=rich.prompt `
   --hidden-import=rich.progress `
   --hidden-import=rich.panel `
-  --hidden-import=yt_dlp `
+  --hidden-import=soupsieve `
+  --hidden-import=requests `
+  --hidden-import=urllib3 `
+  --hidden-import=certifi `
+  --hidden-import=charset_normalizer `
+  --hidden-import=idna `
+  --hidden-import=ffmpeg_python `
   src/main.py
 ```
 
