@@ -3,3 +3,7 @@ credentials.txt
 
 src/__pycache__/
 /work
+
+/ffmpeg
+/build
+/dist

@@ -45,6 +45,36 @@
  - /work/music/output/ : Contains the downloaded MP3 files
  - /work/             : Contains program output and temporary files
 
+ Creating a executable on windows
+  ```
+  pyinstaller --noconfirm --onefile --windowed ^
+  --add-data "ffmpeg/bin/ffmpeg.exe;." ^
+  --add-data "ffmpeg/bin/ffprobe.exe;." ^
+  --icon="icons/icon-96.ico" ^
+  --hidden-import=rich.console ^
+  --hidden-import=rich.prompt ^
+  --hidden-import=rich.progress ^
+  --hidden-import=rich.panel ^
+  --hidden-import=pytube ^
+  --hidden-import=youtube_dl ^
+  src/main.py
+  ```
+
+Windows Powershell
+  ```
+  pyinstaller --noconfirm --onefile --windowed `
+  --add-data "ffmpeg/bin/ffmpeg.exe;." `
+  --add-data "ffmpeg/bin/ffprobe.exe;." `
+  --icon="icons/icon-96.ico" `
+  --hidden-import=rich.console `
+  --hidden-import=rich.prompt `
+  --hidden-import=rich.progress `
+  --hidden-import=rich.panel `
+  --hidden-import=pytube `
+  --hidden-import=youtube_dl `
+  src/main.py
+  ```
+
  Notes:
  - Only videos with proper music metadata will be detected and downloaded
  - Downloads are automatically converted to 192kbps MP3 format
