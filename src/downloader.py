@@ -39,31 +39,31 @@ class YouTubeDownloader:
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(os.path.join(self.output_dir, "output"), exist_ok=True)
 
-    def _get_ydl_opts(self) -> dict:
+    def _get_ydl_opts(self, bitrate: str = '192') -> dict:
         return {
             'format': 'bestaudio/best',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': '192',
+                'preferredquality': bitrate,
             }],
             'retries': 10,
             'ignoreerrors': True,
-            'ffmpeg-location': './ffmpeg/bin/',  # Updated ffmpeg location
+            'ffmpeg-location': './ffmpeg/bin/',
             'outtmpl': os.path.join(self.output_dir, "%(id)s.%(ext)s"),
             'keepvideo': False,
             'quiet': True,
             'no_warnings': True,
             'extract_flat': 'in_playlist',
-            'concurrent_fragments': 4  # Enable parallel fragment downloads
+            'concurrent_fragments': 4
         }
 
-    def download_audio(self, song: Song, progress: Optional[Progress] = None) -> bool:
+    def download_audio(self, song: Song, progress: Optional[Progress] = None, bitrate: str = '192') -> bool:
         """Download a single audio file"""
         try:
             task_id = progress.add_task(f"[cyan]Downloading {song.title}...", total=None) if progress else None
-            
-            with yt_dlp.YoutubeDL(self._get_ydl_opts()) as ydl:
+        
+            with yt_dlp.YoutubeDL(self._get_ydl_opts(bitrate)) as ydl:
                 url = f"http://www.youtube.com/watch?v={song.id}"
                 ydl.download([url])
 
@@ -94,7 +94,7 @@ class YouTubeDownloader:
                 progress.remove_task(task_id)
             return False
 
-    def download_playlist(self, songs: List[Song]):
+    def download_playlist(self, songs: List[Song], bitrate: str = '192'):
         """Download multiple songs using thread pool"""
         total_songs = len(songs)
         success_count = 0
@@ -109,7 +109,7 @@ class YouTubeDownloader:
         ) as progress:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 futures = [
-                    executor.submit(self.download_audio, song, progress)
+                    executor.submit(self.download_audio, song, progress, bitrate)
                     for song in songs
                 ]
                 for future in futures:

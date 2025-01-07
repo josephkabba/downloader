@@ -1,5 +1,5 @@
 import yt_dlp
-from typing import List
+from typing import List, Optional
 import re
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -59,7 +59,7 @@ def get_playlist_id(url: str) -> str:
     
     return playlist_id
 
-def get_playlist_songs(url: str, reverse: bool = False) -> List[Song]:
+def get_playlist_songs(url: str, reverse: bool = False, limit: Optional[int] = None) -> List[Song]:
     """Extract songs from YouTube playlist"""
     try:
         console.print("[cyan]Fetching playlist information...")
@@ -87,6 +87,10 @@ def get_playlist_songs(url: str, reverse: bool = False) -> List[Song]:
             # Apply reverse if requested
             if reverse:
                 valid_entries = valid_entries[::-1]
+            
+            # Apply limit if specified
+            if limit:
+                valid_entries = valid_entries[:limit]
             
             with Progress(
                 SpinnerColumn(),

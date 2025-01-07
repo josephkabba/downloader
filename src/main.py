@@ -67,10 +67,12 @@ Arch Linux:
 def display_help():
     console.print("\n[green]Available commands:")
     console.print("  [cyan]dl <playlist_url> [options][/cyan] - Download songs from a YouTube playlist")
+    console.print("  [cyan]adl <playlist_url> [options][/cyan] - Auto-download songs (no confirmation)")
     console.print("    Options:")
     console.print("      [dim]-n <number>[/dim] - Download only first N songs")
     console.print("      [dim]-r[/dim] - Reverse playlist order")
-    console.print("    Example: dl URL -n 5 -r")
+    console.print("      [dim]-b <bitrate>[/dim] - Set MP3 bitrate (e.g., 128, 192, 320)")
+    console.print("    Example: dl URL -n 5 -r -b 320")
     console.print("  [cyan]help[/cyan] - Show this help message")
     console.print("  [cyan]quit[/cyan] - Exit the program\n")
     
@@ -79,7 +81,8 @@ def parse_dl_options(args):
     options = {
         'url': None,
         'limit': None,
-        'reverse': False
+        'reverse': False,
+        'bitrate': '192'  # default bitrate
     }
     
     i = 1
@@ -97,6 +100,15 @@ def parse_dl_options(args):
                 raise ValueError(f"Invalid limit value: {e}")
         elif args[i] == '-r':
             options['reverse'] = True
+        elif args[i] == '-b' and i + 1 < len(args):
+            try:
+                bitrate = args[i + 1]
+                if bitrate not in ['128', '192', '256', '320']:
+                    raise ValueError("Bitrate must be 128, 192, 256, or 320")
+                options['bitrate'] = bitrate
+                i += 1
+            except ValueError as e:
+                raise ValueError(f"Invalid bitrate value: {e}")
         i += 1
     
     if not options['url']:
@@ -127,11 +139,15 @@ def main():
                 break
             elif command[0] == "help":
                 display_help()
-            elif command[0] == "dl":
+            elif command[0] == ["dl", "adl"]:
                 try:
                     options = parse_dl_options(command)
                     console.print("[cyan]Fetching playlist...[/cyan]")
-                    songs = get_playlist_songs(options['url'], reverse=options['reverse'])
+                    songs = get_playlist_songs(
+                        options['url'], 
+                        reverse=options['reverse'],
+                        limit=options['limit']
+                    )
                     
                     if not songs:
                         console.print("[red]No songs found in playlist")
@@ -149,8 +165,8 @@ def main():
                         if options['reverse']:
                             console.print("[cyan]Note: Playlist order is reversed")
 
-                    if Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
-                        downloader.download_playlist(songs)
+                    if command[0] == "adl" or Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
+                        downloader.download_playlist(songs, bitrate=options['bitrate'])
                         console.print("[green]Download complete!")
                 except ValueError as e:
                     console.print(f"[red]Error: {str(e)}")
