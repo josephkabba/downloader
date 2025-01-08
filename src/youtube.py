@@ -66,6 +66,35 @@ def extract_playlist_id(url: str) -> Optional[str]:
         
     return playlist_id
 
+def is_likely_music(video_info: dict) -> bool:
+    """
+    Determine if a video is likely to be music based on various factors
+    """
+    # Get the necessary information
+    title = video_info.get('title', '').lower()
+    description = video_info.get('description', '').lower()
+    categories = video_info.get('categories', [])
+    tags = [tag.lower() for tag in video_info.get('tags', [])]
+    
+    # Music-related keywords
+    music_keywords = {
+        'official music video', 'official video', 'official audio',
+        'lyrics', 'music video', 'ft.', 'feat.', 'remix',
+        'official lyric video', 'audio', 'album', 'single'
+    }
+    
+    # Check various indicators
+    indicators = [
+        'Music' in categories,  # YouTube category
+        any(keyword in title for keyword in music_keywords),
+        any(keyword in description.split()[:50] for keyword in music_keywords),  # Check first 50 words
+        any('music' in tag or 'song' in tag for tag in tags),
+        bool(re.search(r'(\d{4}|\d{2})', title))  # Year in title
+    ]
+    
+    # If at least 2 indicators are True, it's likely music
+    return sum(indicators) >= 2
+
 
 def extract_video_id(url: str) -> Optional[str]:
     """Extract video ID from various YouTube URL formats"""
@@ -151,7 +180,8 @@ def get_single_video_info(url: str) -> Optional[Media]:
 def get_playlist_media(url: str, 
                       playlist_name: Optional[str] = None,
                       reverse: bool = False, 
-                      limit: Optional[int] = None) -> List[Media]:
+                      limit: Optional[int] = None,
+                      songs_only: bool = False) -> List[Media]:
     """Extract media items from YouTube playlist"""
     try:
         # Special handling for Mix playlists
@@ -173,6 +203,7 @@ def get_playlist_media(url: str,
 
         media_items = []
         failed_count = 0
+        skipped_count = 0  # Add counter for skipped non-music content
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(url, download=False)
@@ -211,6 +242,14 @@ def get_playlist_media(url: str,
                         video_info = ydl.extract_info(video_url, download=False)
                         
                         if video_info:
+                            # Check if we're filtering for songs only
+                            if songs_only:
+                                if not is_likely_music(video_info):
+                                    console.print(f"[yellow]Skipping non-music content: {video_info.get('title', '')}")
+                                    skipped_count += 1
+                                    progress.advance(task)
+                                    continue
+
                             title = clean_title(video_info.get('title', ''))
                             media = Media(
                                 id=video_info['id'],
@@ -230,6 +269,8 @@ def get_playlist_media(url: str,
                         progress.advance(task)
 
         console.print(f"[green]Successfully processed {len(media_items)} items")
+        if skipped_count > 0:
+            console.print(f"[yellow]Skipped {skipped_count} non-music items")
         if failed_count > 0:
             console.print(f"[yellow]Failed to process {failed_count} items")
 

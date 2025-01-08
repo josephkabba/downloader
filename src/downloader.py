@@ -32,6 +32,7 @@ class Media:
         )
 
 class YouTubeDownloader:
+    
     def __init__(self, output_dir: str = "output", max_workers: int = 4):
         self.output_dir = output_dir
         self.max_workers = max_workers
@@ -44,12 +45,18 @@ class YouTubeDownloader:
         os.makedirs(os.path.join(self.output_dir, "video"), exist_ok=True)
         os.makedirs(os.path.join(self.output_dir, "audio"), exist_ok=True)
 
-    def _get_output_path(self, media: Media, is_playlist: bool, media_type: str) -> str:
+    def _get_output_path(self, media: Media, is_playlist: bool, is_audio_output: bool) -> str:
         """Generate appropriate output path based on media type and context"""
+        # Determine the media type directory
+        media_type = "audio" if is_audio_output else "video"
+        
         if is_playlist:
+            # For playlists, use playlist name or timestamp
             playlist_name = media.playlist_name or datetime.now().strftime("%Y%m%d_%H%M%S")
             return os.path.join(self.output_dir, "playlist", playlist_name, media_type)
-        return os.path.join(self.output_dir, media_type)
+        else:
+            # For single files, use direct media type directory
+            return os.path.join(self.output_dir, media_type)
 
     def _clean_temp_files(self, output_path: str, base_filename: str):
         """Clean up temporary and duplicate video files"""
@@ -67,7 +74,7 @@ class YouTubeDownloader:
                 os.remove(dup_file)
             except Exception:
                 pass
-
+    
     def _get_ydl_opts(self, 
                      media: Media, 
                      is_playlist: bool,
@@ -76,48 +83,51 @@ class YouTubeDownloader:
                      convert_to_audio: bool = False,
                      bitrate: str = '192') -> dict:
         """Configure yt-dlp options based on download preferences"""
-        video_output_path = self._get_output_path(media, is_playlist, "video")
-        audio_output_path = self._get_output_path(media, is_playlist, "audio")
+        # Determine if final output will be audio
+        is_audio_output = convert_to_audio or not download_video
         
-        # Create necessary directories
-        os.makedirs(video_output_path, exist_ok=True)
-        os.makedirs(audio_output_path, exist_ok=True)
-
-        # Base output template
-        if download_video:
-            output_template = os.path.join(video_output_path, '%(title)s.%(ext)s')
-        else:
-            output_template = os.path.join(audio_output_path, '%(title)s.%(ext)s')
+        # Get appropriate output path
+        output_path = self._get_output_path(media, is_playlist, is_audio_output)
+        os.makedirs(output_path, exist_ok=True)
 
         opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best' if download_video else 'bestaudio/best',
-            'ffmpeg-location': './ffmpeg/bin/',
-            'outtmpl': output_template,
+            'format': 'bestaudio/best' if is_audio_output else 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
             'keepvideo': keep_video,
             'quiet': True,
             'no_warnings': True,
-            'merge_output_format': 'mp4',  # Force merged video format to mp4
-            'postprocessor_args': ['-c:v', 'copy', '-c:a', 'copy'],  # Prevent re-encoding
+            'writethumbnail': True,
+            'postprocessors': []
         }
 
-        postprocessors = []
-        
         # Add audio conversion if needed
-        if convert_to_audio or not download_video:
-            audio_post_processor = {
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': bitrate,
-            }
-            postprocessors.append(audio_post_processor)
+        if is_audio_output:
+            opts['format'] = 'bestaudio/best'
+            opts['postprocessors'] = [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': bitrate,
+                },
+                {
+                    'key': 'FFmpegMetadata',
+                    'add_metadata': True,
+                },
+                {
+                    'key': 'EmbedThumbnail',
+                    'already_have_thumbnail': False
+                },
+            ]
+            # Set additional FFmpeg options
+            opts['postprocessor_args'] = [
+                '-id3v2_version', '3',
+                '-metadata', 'title=%(title)s',
+            ]
+            # Additional options for better audio handling
+            opts['extract_audio'] = True
+            opts['audio_format'] = 'mp3'
+            opts['audio_quality'] = bitrate
             
-            # If we're converting video to audio, set the output path for the audio file
-            if convert_to_audio:
-                opts['outtmpl_na'] = os.path.join(audio_output_path, '%(title)s.%(ext)s')
-
-        if postprocessors:
-            opts['postprocessors'] = postprocessors
-
         return opts
 
     def download_media(self, 

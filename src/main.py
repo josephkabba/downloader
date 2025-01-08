@@ -78,6 +78,7 @@ def display_help():
     console.print("      [dim]-kv[/dim] - Keep video files (default for video downloads)")
     console.print("      [dim]-o <output_dir>[/dim] - Specify output directory")
     console.print("      [dim]-pn <name>[/dim] - Custom playlist folder name")
+    console.print("      [dim]-so[/dim] - Download only songs from playlist (filters out non-music content)")
     console.print("    Example: pl URL -n 5 -r -b 320 -v -ka -o /downloads")
     console.print("  [cyan]help[/cyan] - Show this help message")
     console.print("  [cyan]quit[/cyan] - Exit the program\n")
@@ -93,7 +94,8 @@ def parse_options(args):
         'keep_video': True,
         'convert_to_audio': False,
         'output_dir': 'output',
-        'playlist_name': None
+        'playlist_name': None,
+        'songs_only': False
     }
     
     i = 1
@@ -132,6 +134,8 @@ def parse_options(args):
         elif args[i] == '-pn' and i + 1 < len(args):
             options['playlist_name'] = args[i + 1]
             i += 1
+        elif args[i] == '-so':
+            options['songs_only'] = True
         i += 1
     
     if not options['url']:
@@ -146,7 +150,7 @@ def main():
         console.print("\n[red]Please install FFmpeg and try again.[/red]")
         sys.exit(1)
 
-    console.print("[bold green]YouTube Media Downloader[/bold green]")
+    console.print("[bold green]Tube Media Downloader[/bold green]")
     display_help()
 
     while True:
@@ -200,7 +204,8 @@ def main():
                             options['url'],
                             playlist_name=options['playlist_name'],
                             reverse=options['reverse'],
-                            limit=options['limit']
+                            limit=options['limit'],
+                            songs_only=options['songs_only']
                         )
                         
                         if not media_items:

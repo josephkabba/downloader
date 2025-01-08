@@ -1,4 +1,4 @@
- # YouTube Media Downloader
+ # Tube Media Downloader
 
  A powerful command-line tool that downloads videos and audio from YouTube, supporting both single videos and playlists.
  The software supports high-quality video downloads and MP3 conversion with custom naming and organization options.
