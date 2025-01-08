@@ -6,6 +6,7 @@ videos.txt
 /work/
 /ffmpeg/
 /icons/
+/output/
 
 # Build and distribution
 /build/

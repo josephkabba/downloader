@@ -184,6 +184,7 @@ def main():
             console.print(f"[red]Error: {str(e)}")
 
     console.print("[yellow]Goodbye!")
+    input("\nPress Enter to exit...")
 
 if __name__ == "__main__":
     main()

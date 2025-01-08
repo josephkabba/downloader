@@ -95,6 +95,7 @@ pyinstaller --noconfirm --onefile --windowed ^
   --hidden-import=charset_normalizer ^
   --hidden-import=idna ^
   --hidden-import=ffmpeg_python ^
+  --hidden-import=ffmpeg-python ^
   src/main.py
 ```
 
@@ -121,6 +122,7 @@ pyinstaller --noconfirm --onefile --windowed `
   --hidden-import=charset_normalizer `
   --hidden-import=idna `
   --hidden-import=ffmpeg_python `
+  --hidden-import=ffmpeg-python `
   src/main.py
 ```
 
