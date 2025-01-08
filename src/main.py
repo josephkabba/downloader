@@ -2,7 +2,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
 from downloader import YouTubeDownloader
-from youtube import get_playlist_songs
+from youtube import get_playlist_media, get_single_video_info, process_url
 import subprocess
 import sys
 import platform
@@ -66,23 +66,34 @@ Arch Linux:
 
 def display_help():
     console.print("\n[green]Available commands:")
-    console.print("  [cyan]dl <playlist_url> [options][/cyan] - Download songs from a YouTube playlist")
-    console.print("  [cyan]adl <playlist_url> [options][/cyan] - Auto-download songs (no confirmation)")
+    console.print("  [cyan]dl <url> [options][/cyan] - Download single video/audio")
+    console.print("  [cyan]pl <playlist_url> [options][/cyan] - Download from playlist")
+    console.print("  [cyan]apl <playlist_url> [options][/cyan] - Auto-download playlist (no confirmation)")
     console.print("    Options:")
-    console.print("      [dim]-n <number>[/dim] - Download only first N songs")
+    console.print("      [dim]-n <number>[/dim] - Download only first N items")
     console.print("      [dim]-r[/dim] - Reverse playlist order")
-    console.print("      [dim]-b <bitrate>[/dim] - Set MP3 bitrate (e.g., 128, 192, 320)")
-    console.print("    Example: dl URL -n 5 -r -b 320")
+    console.print("      [dim]-b <bitrate>[/dim] - Set MP3 bitrate (128, 192, 256, 320)")
+    console.print("      [dim]-v[/dim] - Download video (default is audio only)")
+    console.print("      [dim]-ka[/dim] - Keep audio when downloading video")
+    console.print("      [dim]-kv[/dim] - Keep video files (default for video downloads)")
+    console.print("      [dim]-o <output_dir>[/dim] - Specify output directory")
+    console.print("      [dim]-pn <name>[/dim] - Custom playlist folder name")
+    console.print("    Example: pl URL -n 5 -r -b 320 -v -ka -o /downloads")
     console.print("  [cyan]help[/cyan] - Show this help message")
     console.print("  [cyan]quit[/cyan] - Exit the program\n")
     
-def parse_dl_options(args):
-    """Parse download command options"""
+def parse_options(args):
+    """Parse command options"""
     options = {
         'url': None,
         'limit': None,
         'reverse': False,
-        'bitrate': '192'  # default bitrate
+        'bitrate': '192',
+        'download_video': False,
+        'keep_video': True,
+        'convert_to_audio': False,
+        'output_dir': 'output',
+        'playlist_name': None
     }
     
     i = 1
@@ -109,6 +120,18 @@ def parse_dl_options(args):
                 i += 1
             except ValueError as e:
                 raise ValueError(f"Invalid bitrate value: {e}")
+        elif args[i] == '-v':
+            options['download_video'] = True
+        elif args[i] == '-ka':
+            options['convert_to_audio'] = True
+        elif args[i] == '-kv':
+            options['keep_video'] = True
+        elif args[i] == '-o' and i + 1 < len(args):
+            options['output_dir'] = args[i + 1]
+            i += 1
+        elif args[i] == '-pn' and i + 1 < len(args):
+            options['playlist_name'] = args[i + 1]
+            i += 1
         i += 1
     
     if not options['url']:
@@ -123,10 +146,8 @@ def main():
         console.print("\n[red]Please install FFmpeg and try again.[/red]")
         sys.exit(1)
 
-    console.print("[bold green]YouTube Playlist Downloader[/bold green]")
+    console.print("[bold green]YouTube Media Downloader[/bold green]")
     display_help()
-
-    downloader = YouTubeDownloader(max_workers=4)
 
     while True:
         try:
@@ -139,40 +160,79 @@ def main():
                 break
             elif command[0] == "help":
                 display_help()
-            elif command[0] in ["dl", "adl"]:
+            elif command[0] in ["dl", "pl", "apl"]:
                 try:
-                    options = parse_dl_options(command)
-                    console.print("[cyan]Fetching playlist...[/cyan]")
-                    songs = get_playlist_songs(
-                        options['url'], 
-                        reverse=options['reverse'],
-                        limit=options['limit']
-                    )
+                    options = parse_options(command)
+                    downloader = YouTubeDownloader(output_dir=options['output_dir'])
+
+                    # Process and validate the URL first
+                    console.print("[cyan]Processing URL...[/cyan]")
+                    processed_url, is_playlist = process_url(options['url'])
                     
-                    if not songs:
-                        console.print("[red]No songs found in playlist")
+                    # Validate command matches URL type
+                    if command[0] == "dl" and is_playlist:
+                        console.print("[yellow]Use 'pl' or 'apl' commands for playlist downloads")
+                        continue
+                    elif command[0] in ["pl", "apl"] and not is_playlist:
+                        console.print("[yellow]Use 'dl' command for single video downloads")
                         continue
 
-                    # Apply limit if specified
-                    if options['limit']:
-                        original_count = len(songs)
-                        songs = songs[:options['limit']]
-                        console.print(f"[green]Selected {len(songs)} of {original_count} songs from playlist")
-                        if options['reverse']:
-                            console.print("[cyan]Note: Songs are taken from the end of the playlist")
-                    else:
-                        console.print(f"[green]Found {len(songs)} songs in playlist")
-                        if options['reverse']:
-                            console.print("[cyan]Note: Playlist order is reversed")
+                    # Update the URL with the processed one
+                    options['url'] = processed_url
 
-                    if command[0] == "adl" or Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
-                        downloader.download_playlist(songs, bitrate=options['bitrate'])
-                        console.print("[green]Download complete!")
+                    if command[0] == "dl":
+                        # Single video/audio download
+                        console.print("[cyan]Fetching video information...[/cyan]")
+                        media = get_single_video_info(options['url'])
+                        if media:
+                            downloader.download_media(
+                                media,
+                                download_video=options['download_video'],
+                                keep_video=options['keep_video'],
+                                convert_to_audio=options['convert_to_audio'],
+                                bitrate=options['bitrate']
+                            )
+                            console.print("[green]Download complete!")
+                    else:  # pl or apl
+                        # Playlist download
+                        console.print("[cyan]Fetching playlist...[/cyan]")
+                        media_items = get_playlist_media(
+                            options['url'],
+                            playlist_name=options['playlist_name'],
+                            reverse=options['reverse'],
+                            limit=options['limit']
+                        )
+                        
+                        if not media_items:
+                            console.print("[red]No items found in playlist")
+                            continue
+
+                        if options['limit']:
+                            original_count = len(media_items)
+                            media_items = media_items[:options['limit']]
+                            console.print(f"[green]Selected {len(media_items)} of {original_count} items from playlist")
+                            if options['reverse']:
+                                console.print("[cyan]Note: Items are taken from the end of the playlist")
+                        else:
+                            console.print(f"[green]Found {len(media_items)} items in playlist")
+                            if options['reverse']:
+                                console.print("[cyan]Note: Playlist order is reversed")
+
+                        if command[0] == "apl" or Prompt.ask("Do you want to download them?", choices=["y", "n"]) == "y":
+                            downloader.download_playlist(
+                                media_items,
+                                download_video=options['download_video'],
+                                keep_video=options['keep_video'],
+                                convert_to_audio=options['convert_to_audio'],
+                                bitrate=options['bitrate']
+                            )
+                            console.print("[green]Download complete!")
+
                 except ValueError as e:
                     console.print(f"[red]Error: {str(e)}")
                     continue
                 except Exception as e:
-                    console.print(f"[red]Error processing playlist: {str(e)}")
+                    console.print(f"[red]Error processing request: {str(e)}")
                     continue
             else:
                 console.print("[red]Invalid command. Type 'help' for available commands")
@@ -184,7 +244,6 @@ def main():
             console.print(f"[red]Error: {str(e)}")
 
     console.print("[yellow]Goodbye!")
-    input("\nPress Enter to exit...")
 
 if __name__ == "__main__":
     main()
