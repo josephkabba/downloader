@@ -145,6 +145,11 @@
      src/main.py
  ```
 
+ Using auto-py-to-exe (Run it in the terminal after running pip install):
+ ```
+    auto-py-to-exe
+ ```
+
  ## Notes:
  - Default audio quality is 192kbps MP3 format
  - Video downloads preserve original quality

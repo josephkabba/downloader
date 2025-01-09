@@ -82,7 +82,7 @@ def display_help():
     console.print("    Example: pl URL -n 5 -r -b 320 -v -ka -o /downloads")
     console.print("  [cyan]help[/cyan] - Show this help message")
     console.print("  [cyan]quit[/cyan] - Exit the program\n")
-    
+
 def parse_options(args):
     """Parse command options"""
     options = {
@@ -129,8 +129,13 @@ def parse_options(args):
         elif args[i] == '-kv':
             options['keep_video'] = True
         elif args[i] == '-o' and i + 1 < len(args):
-            options['output_dir'] = args[i + 1]
-            i += 1
+            path_parts = []
+            j = i + 1
+            while j < len(args) and not args[j].startswith('-'):
+                path_parts.append(args[j])
+                j += 1
+            options['output_dir'] = ' '.join(path_parts)
+            i = j - 1
         elif args[i] == '-pn' and i + 1 < len(args):
             options['playlist_name'] = args[i + 1]
             i += 1

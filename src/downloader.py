@@ -74,6 +74,23 @@ class YouTubeDownloader:
                 os.remove(dup_file)
             except Exception:
                 pass
+                
+        # Clean up web audio formats
+        web_audio_patterns = [
+            "*.m4a",
+            "*.webm",
+            "*.ogg",
+            "*.opus",
+            "*.weba",
+            "*.wav"
+        ]
+        
+        for pattern in web_audio_patterns:
+            for audio_file in glob.glob(os.path.join(output_path, pattern)):
+                try:
+                    os.remove(audio_file)
+                except Exception:
+                    pass
     
     def _get_ydl_opts(self, 
                      media: Media, 
